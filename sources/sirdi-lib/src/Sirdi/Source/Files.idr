@@ -26,5 +26,5 @@ fetchFiles (Git url commit) = do
 
 ||| Write the downloaded source files to a specified directory.
 export
-writeTo : Files loc -> FilePath -> IOEither String ()
-writeTo (MkFiles src) dest = copyDirRec src dest
+(.writeTo) : Files loc -> FilePath -> IOEither String ()
+(.writeTo) (MkFiles src) dest = copyDirRec src dest

@@ -4,11 +4,23 @@ import Sirdi.Package.Identifier
 
 
 public export
-record Description (for : PkgID pk) where
+record LibraryDescription where
+    constructor MkLibraryDescription
+    modules : List String
+
+
+public export
+record ApplicationDescription where
+    constructor MkApplicationDescription
+    main : String
+
+
+public export
+record Description {pk : _} (for : PkgID pk) where
     constructor MkDescription
     deps     : List (PkgID Library)
-    modules  : List String
-    main     : Maybe String
     passthru : List (String, String)
 
-
+    opts : case pk of
+                Library => LibraryDescription
+                Application => ApplicationDescription

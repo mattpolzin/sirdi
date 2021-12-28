@@ -22,3 +22,9 @@ public export
 data PkgID : PackageKind -> Type where
     Normal : (pk : _) -> (name : String) -> (loc : Loc IsPinned) -> PkgID pk
     Legacy : (name : String) -> PkgID Library
+
+
+public export
+(.name) : PkgID pk -> String
+(.name) (Normal _ name _) = name
+(.name) (Legacy name)     = name
