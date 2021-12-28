@@ -1,7 +1,7 @@
 ||| Types for specifying the source location (git, local, etc.) of a package.
 module Sirdi.Source.Loc
 
-import Sirdi.Source.Loc.Pin
+import public Sirdi.Source.Loc.Pin
 import Util.IOEither
 import Util.Git
 import Util.URL
