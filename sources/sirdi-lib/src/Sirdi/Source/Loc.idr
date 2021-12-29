@@ -6,6 +6,7 @@ import Util.IOEither
 import Util.Git
 import Util.URL
 import Util.Files
+import Data.Hashable
 
 
 ||| The location of some source files (potentially containing many packages).
@@ -25,3 +26,9 @@ pinLoc : Loc MaybePinned -> IOEither String (Loc IsPinned)
 pinLoc (Local fp)         = pure $ Local fp
 pinLoc (Git url (Just x)) = pure $ Git url x
 pinLoc (Git url Nothing)  = Git url <$> gitRemoteLatestCommitHash url
+
+
+public export
+Hashable (Loc IsPinned) where
+    hashWithSalt salt (Git commit url) = combine (hashWithSalt salt commit.inner) (hashWithSalt salt url.inner)
+    hashWithSalt salt (Local fp)       = hashWithSalt salt fp.inner

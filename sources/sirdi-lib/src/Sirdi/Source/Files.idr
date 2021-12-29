@@ -1,7 +1,10 @@
 ||| Types for dealing with downloaded source files.
 module Sirdi.Source.Files
 
+import Data.Hashable
 import Sirdi.Source.Loc
+import Sirdi.Directories
+import System.Directory
 import Util.Git
 import Util.Files
 import Util.IOEither
@@ -11,20 +14,29 @@ import Util.IOEither
 export
 record Files (for : Loc IsPinned) where
     constructor MkFiles
-    dir : FilePath
 
 
-||| Fetch the files from a source.
+directory : Loc IsPinned -> FilePath
+directory loc = MkFilePath "\{sirdiSources.inner}/\{show $ hash loc}"
+
+
 export
-fetchFiles : (loc : Loc IsPinned) -> IOEither String (Files loc)
-fetchFiles (Local filepath) = pure $ MkFiles filepath
-fetchFiles (Git url commit) = do
-    dir <- newTempDir
-    gitClone url commit dir
-    pure $ MkFiles dir
+(.dir) : {loc : _} -> (0 _ : Files loc) -> FilePath
+(.dir) {loc} _ = directory loc
 
 
-||| Write the downloaded source files to a specified directory.
-export
-(.writeTo) : Files loc -> FilePath -> IOEither String ()
-(.writeTo) (MkFiles src) dest = copyDirRec src dest
+||| Try and fetch the files from a source, without checking whether they
+||| already exist.
+doFetchSource : (loc : Loc IsPinned) -> IOEither String (Files loc)
+doFetchSource loc@(Local filepath) = copyDirRec filepath (directory loc) $> MkFiles
+doFetchSource loc@(Git url commit) = gitClone url commit (directory loc) $> MkFiles
+
+
+||| Fetch the files from a source if they have not already been fetched.
+public export
+fetchSource : (loc : Loc IsPinned) -> IOEither String (Files loc)
+fetchSource loc = do
+    alreadyFetched <- exists (directory loc).inner
+    if alreadyFetched
+        then pure MkFiles
+        else doFetchSource loc

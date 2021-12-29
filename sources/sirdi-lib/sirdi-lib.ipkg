@@ -1,5 +1,5 @@
 package sirdi-lib
 
-depends = toml, contrib
+depends = toml, contrib, hashable
 
 sourcedir = "src"
