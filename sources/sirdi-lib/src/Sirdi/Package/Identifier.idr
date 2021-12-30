@@ -4,6 +4,7 @@ module Sirdi.Package.Identifier
 
 import Sirdi.Source.Loc
 import Sirdi.Source.Loc.Pin
+import Data.Hashable
 
 
 ||| Whether a package is a library or application.
