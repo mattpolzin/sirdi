@@ -30,16 +30,20 @@ Output {pk = Library} pkg@(Legacy _)     = ()
 Output {pk = Application} pkg            = Executable pkg
 
 
+directory : String -> Loc IsPinned -> FilePath
+directory name loc = MkFilePath "\{sirdiOutputs.inner}/\{name}\{show $ hash loc}"
+
+
 ||| Get the directory where the TTC files are being stored.
 public export
 (.dir) : TTCFiles pkg -> FilePath
-(.dir) (MkTTCFiles name loc) = MkFilePath "\{sirdiOutputs.inner}/\{name}\{show $ hash loc}"
+(.dir) (MkTTCFiles name loc) = directory name loc
 
 
 ||| Get the filepath to the executable.
 public export
 (.file) : Executable pkg -> FilePath
-(.file) (MkExecutable name loc) = MkFilePath "\{sirdiOutputs.inner}/\{name}\{show $ hash loc}"
+(.file) (MkExecutable name loc) = MkFilePath $ "\{(directory name loc).inner}/main"
 
 
 ||| Given the executable for a package, run it.

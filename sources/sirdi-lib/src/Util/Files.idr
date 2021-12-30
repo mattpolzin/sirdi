@@ -11,6 +11,10 @@ record FilePath where
 
 
 public export
+newDir : FilePath -> IOEither String ()
+
+
+public export
 newTempDir : IOEither String FilePath
 newTempDir = do
     (out, n) <- run "mktemp -d"
@@ -21,3 +25,7 @@ newTempDir = do
 
 public export
 copyDirRec : FilePath -> FilePath -> IOEither String ()
+
+
+public export
+symLink : FilePath -> FilePath -> IOEither String ()
