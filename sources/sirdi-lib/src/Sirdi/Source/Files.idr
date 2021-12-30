@@ -33,7 +33,7 @@ doFetchSource loc@(Git url commit) = gitClone url commit (directory loc) $> MkFi
 
 
 ||| Fetch the files from a source if they have not already been fetched.
-public export
+export
 fetchSource : (loc : Loc IsPinned) -> IOEither String (Files loc)
 fetchSource loc = do
     alreadyFetched <- exists (directory loc).inner

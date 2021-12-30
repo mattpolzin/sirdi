@@ -2,4 +2,6 @@ package sirdi-lib
 
 depends = toml, contrib, hashable
 
+modules = Sirdi.Operations
+
 sourcedir = "src"
