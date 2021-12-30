@@ -1,31 +1,34 @@
 module Util.Files
 
+import public System.Path
 import Util.IOEither
 import System
 
 
-public export
+{-public export
 record FilePath where
     constructor MkFilePath
-    inner : String
+    inner : String-}
 
 
 public export
-newDir : FilePath -> IOEither String ()
+newDir : Path -> IOEither String ()
 
 
 public export
-newTempDir : IOEither String FilePath
+newTempDir : IOEither String Path
 newTempDir = do
     (out, n) <- run "mktemp -d"
     case n of
-         0 => pure $ MkFilePath out
+         0 => pure $ parse out
          _ => throw "Failed to create temp dir"
 
 
 public export
-copyDirRec : FilePath -> FilePath -> IOEither String ()
+copyDirRec : Path -> Path -> IOEither String ()
+copyDirRec x y = ?copyDirRec_rhs
 
 
 public export
-symLink : FilePath -> FilePath -> IOEither String ()
+symLink : Path -> Path -> IOEither String ()
+symLink x y = ?symLink_rhs

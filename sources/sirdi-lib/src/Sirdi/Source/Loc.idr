@@ -16,7 +16,7 @@ data Loc : PinKind -> Type where
     Git : URL -> Pin sk CommitHash -> Loc sk
 
     ||| The files are located in a directory on the local mcahine.
-    Local : FilePath -> Loc sk
+    Local : Path -> Loc sk
 
 
 ||| Take a source which may or may not be pinned, and pin it. This involves
@@ -31,4 +31,4 @@ pinLoc (Git url Nothing)  = Git url <$> gitRemoteLatestCommitHash url
 public export
 Hashable (Loc IsPinned) where
     hashWithSalt salt (Git commit url) = combine (hashWithSalt salt commit.inner) (hashWithSalt salt url.inner)
-    hashWithSalt salt (Local fp)       = hashWithSalt salt fp.inner
+    hashWithSalt salt (Local fp)       = hashWithSalt salt $ show fp

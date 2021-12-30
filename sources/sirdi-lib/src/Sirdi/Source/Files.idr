@@ -16,12 +16,12 @@ record Files (for : Loc IsPinned) where
     constructor MkFiles
 
 
-directory : Loc IsPinned -> FilePath
-directory loc = MkFilePath "\{sirdiSources.inner}/\{show $ hash loc}"
+directory : Loc IsPinned -> Path
+directory loc = sirdiSources /> show (hash loc)
 
 
 export
-(.dir) : {loc : _} -> (0 _ : Files loc) -> FilePath
+(.dir) : {loc : _} -> (0 _ : Files loc) -> Path
 (.dir) {loc} _ = directory loc
 
 
@@ -36,7 +36,7 @@ doFetchSource loc@(Git url commit) = gitClone url commit (directory loc) $> MkFi
 export
 fetchSource : (loc : Loc IsPinned) -> IOEither String (Files loc)
 fetchSource loc = do
-    alreadyFetched <- exists (directory loc).inner
+    alreadyFetched <- exists (show $ directory loc)
     if alreadyFetched
         then pure MkFiles
         else doFetchSource loc

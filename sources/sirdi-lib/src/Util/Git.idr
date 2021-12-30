@@ -17,5 +17,5 @@ gitRemoteLatestCommitHash url = ?gitRemoteLatestCommitHash_rhs
 
 
 public export
-gitClone : URL -> CommitHash -> FilePath -> IOEither String ()
+gitClone : URL -> CommitHash -> Path -> IOEither String ()
 gitClone x y z = ?gitClone_rhs

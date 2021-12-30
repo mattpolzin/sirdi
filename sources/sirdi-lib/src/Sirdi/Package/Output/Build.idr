@@ -5,6 +5,7 @@ import Sirdi.Source.Files
 import Sirdi.Source.Loc
 import Sirdi.Package.Description
 import Sirdi.Package.Identifier
+import Sirdi.Directories
 import Data.List.Quantifiers
 import Util.IOEither
 import Util.Files
@@ -25,7 +26,8 @@ doBuildPackage : {pk : _}
 doBuildPackage {pk} {name} {loc} files desc depOutputs = do
     -- Create build directories.
     tempDir <- newTempDir
-    mapErr show $ MkEitherT $ createDir "\{tempDir.inner}/depends"
+    let dependsDir = tempDir /> "depends"
+    mapErr show $ MkEitherT $ createDir $ show dependsDir
 
     -- Copy source files into the build dir.
     copyDirRec files.dir tempDir
@@ -35,7 +37,7 @@ doBuildPackage {pk} {name} {loc} files desc depOutputs = do
                                           (Legacy name) => pure name
                                           (Normal Library name loc) => do
                                               let installedAs = "\{name}\{show $ hash loc}"
-                                              symLink ttcFiles.dir (MkFilePath "\{tempDir.inner}/depends/\{installedAs}")
+                                              symLink ttcFiles.dir (dependsDir /> installedAs)
                                               pure installedAs
                                           ) $ allToList depOutputs
 
@@ -49,21 +51,22 @@ doBuildPackage {pk} {name} {loc} files desc depOutputs = do
         passthru = desc.passthru
       }
 
-    let ipkgPath = "\{tempDir.inner}/\{name}.ipkg"
-    writeIpkg ipkg ipkgPath
-    _ <- system "idris2 --build \{ipkgPath}"
+    let ipkgPath = tempDir /> name <.> ".ipkg"
+    writeIpkg ipkg (show ipkgPath)
+    _ <- system "idris2 --build \{show ipkgPath}"
 
     let installDir = directory name loc
 
     -- TODO: Cleanup temp dir. It would be nice if we had a "withTempDir" function in Util.
     case pk of
          Library     => do
-            copyDirRec (MkFilePath "\{tempDir.inner}/build/ttc") (MkFilePath "\{installDir.inner}")
+            let ttcDir = (installDir /> "build") /> "ttc"
+            copyDirRec ttcDir installDir
             pure $ MkTTCFiles name loc
 
          Application => do
             newDir installDir
-            mapErr show $ MkEitherT $ copyFile "\{tempDir.inner}/build/exec/main" "\{installDir.inner}/main"
+            mapErr show $ MkEitherT $ copyFile "\{show tempDir}/build/exec/main" "\{show installDir}/main"
             pure $ MkExecutable name loc
 
 
@@ -76,7 +79,7 @@ buildPackage : {pk : _}
             -> All Output desc.deps
             -> IOEither String (Output (Normal pk name loc))
 buildPackage {pk} {name} {loc} files desc depOutputs = do
-    alreadyBuilt <- exists $ (directory name loc).inner
+    alreadyBuilt <- exists $ show $ directory name loc
     if alreadyBuilt
         then case pk of
                   Library => pure $ MkTTCFiles name loc

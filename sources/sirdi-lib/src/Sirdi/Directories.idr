@@ -1,18 +1,18 @@
 module Sirdi.Directories
 
-import Util.Files
+import public System.Path
 
 
 export
-sirdiRoot : FilePath
-sirdiRoot = MkFilePath ".sirdi"
+sirdiRoot : Path
+sirdiRoot = parse ".sirdi"
 
 
 export
-sirdiSources : FilePath
-sirdiSources = MkFilePath "\{sirdiRoot.inner}/sources"
+sirdiSources : Path
+sirdiSources = sirdiRoot /> "sources"
 
 
 export
-sirdiOutputs : FilePath
-sirdiOutputs = MkFilePath "\{sirdiRoot.inner}/outputs"
+sirdiOutputs : Path
+sirdiOutputs = sirdiRoot /> "outputs"
