@@ -11,12 +11,12 @@ import Data.Hashable
 
 ||| The location of some source files (potentially containing many packages).
 public export
-data Loc : PinKind -> Type where
+data Loc : (0 pk : PinKind) -> Type where
     ||| The files are located on a repote git repository.
-    Git : URL -> Pin sk CommitHash -> Loc sk
+    Git : URL -> Pin pk CommitHash -> Loc pk
 
     ||| The files are located in a directory on the local mcahine.
-    Local : Path -> Loc sk
+    Local : Path -> Loc pk
 
 
 ||| Take a source which may or may not be pinned, and pin it. This involves

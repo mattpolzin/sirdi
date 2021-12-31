@@ -2,8 +2,8 @@ package sirdi-lib
 
 depends = toml, contrib, hashable
 
-modules = Sirdi.Directories, Sirdi.Operations, Sirdi.Package.Description, Sirdi.Package.Description.Parse,
-          Sirdi.Package.Identifier, Sirdi.Package.Output, Sirdi.Package.Output.Build, Sirdi.Source.Config, Sirdi.Source.Files,
+modules = Sirdi.Directories, Sirdi.Operations, Sirdi.Package.Recipe.Parse,
+          Sirdi.Package.Identifier, Sirdi.Package.Recipe, Sirdi.Package.Output, Sirdi.Source.Config, Sirdi.Source.Files,
           Sirdi.Source.Loc, Sirdi.Source.Loc.Pin, Util.Files, Util.Git, Util.IOEither, Util.Ipkg, Util.Ipkg,
           Util.Quantifiers, Util.TOML, Util.The, Util.URL
 

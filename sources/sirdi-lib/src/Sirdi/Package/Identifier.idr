@@ -4,7 +4,6 @@ module Sirdi.Package.Identifier
 
 import Sirdi.Source.Loc
 import Sirdi.Source.Loc.Pin
-import Data.Hashable
 
 
 ||| Whether a package is a library or application.
@@ -25,8 +24,7 @@ data Package : Type where
     Installed : (name : String) -> Package
 
 
-{-
-public export
-(.name) : Package pkg -> String
-(.name) (Normal _ id) = id.name
-(.name) (Legacy name) = name
+export
+(.name) : Package -> String
+(.name) (Normal name _)  = name
+(.name) (Installed name) = name

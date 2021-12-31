@@ -1,75 +1,83 @@
-||| Types relating to the build outputs of packages.
 module Sirdi.Package.Output
 
 import Sirdi.Package.Identifier
-import Sirdi.Package.Description
-import Sirdi.Directories
+import Sirdi.Package.Recipe
 import Sirdi.Source.Loc
 import Sirdi.Source.Files
+import Sirdi.Directories
+import Data.List.Quantifiers
 import Util.Files
 import Util.IOEither
+import Util.Quantifiers
+import Util.Ipkg
 import Data.Hashable
 import System
-import Data.List.Quantifiers
-import Util.Quantifiers
 
 
-||| The TTC files produced as a result of building the specified library.
 export
-data TTCFiles : (0 pkg : Package) -> Type where
-    MkTTCFiles : Path -> TTCFiles pkg
+record Output (pkg : Package) where
+    constructor MkOutput
+    path : Path
 
 
-||| The result executable from building the specified application.
 export
-data Executable : (0 pkg : Package) -> Type where
-    MkExecutable : Path -> Executable pkg
+buildInstalled : Output (Installed name)
+buildInstalled = MkOutput emptyPath
 
 
-public export
-Output : Recipe kind pkg -> Type
-Output InstalledRecipe = ()
-Output (NormalRecipe desc) with (desc.kind)
-  _ | Library = TTCFiles pkg
-  _ | Application = Executable pkg
+dirName : String -> Loc IsPinned -> String
+dirName name loc = "\{name}\{show $ hash loc}"
 
 
-public export
-record NormalInput (loc : Loc IsPinned) (desc : Description) where
-    constructor MkNormalInput
-    sourceFiles : Files loc
-    depRecipes : All (Recipe Library) desc.deps
-    depOutputs : All (\(dep ** recipe) => Output recipe) (allToList depRecipes)
+linkDep : Path -> DPair Package Output -> IOEither String ()
+linkDep depDir (Installed name ** output) = pure ()
+linkDep depDir (Normal name loc ** output) = symLink output.path $ depDir /> dirName name loc
 
 
-public export
-Input : {pkg : Package} -> Recipe pk pkg -> Type
-Input {pkg = Normal name loc} (NormalRecipe desc) = NormalInput loc desc
-Input InstalledRecipe = ()
+recipeToIpkg : Recipe pkg -> String -> Ipkg
+recipeToIpkg (MkRecipe kind deps extra passthru) name =
+    MkIpkg {
+        name = name,
+        depends = map (.name) deps,
+        modules = case kind of { Library => extra.modules; Application => [] },
+        main = case kind of { Library => Nothing; Application => Just extra.main },
+        exec = case kind of { Library => Nothing; Application => Just "main" },
+        passthru = passthru
+    }
 
 
-{-
-directory : Package -> Path
-directory pkg = sirdiOutputs /> "\{pkg.name}\{show $ hash pkg.loc}"-}
-
-
-||| Get the directory where the TTC files are being stored.
-public export
-(.dir) : TTCFiles pkg -> Path
-(.dir) (MkTTCFiles path) = path
-
-
-||| Get the filepath to the executable.
-public export
-(.file) : Executable pkg -> Path
-(.file) (MkExecutable path) = path
-
-
-||| Given the executable for a package, run it.
 export
-runExecutable : Executable pkg -> IOEither String String
-runExecutable exec = do
-    (output, n) <- run "\{show exec.file}"
-    case n of
-        0 => pure output
-        _ => throw "Failed to run executable \{show exec.file} with output:\n\{output}"
+buildNormal : {name : _}
+           -> {loc : _}
+           -> (recipe : Recipe (Normal name loc))
+           -> Files loc
+           -> All Output recipe.deps
+           -> IOEither String (Output (Normal name loc))
+buildNormal recipe files depOutputs =
+    withTempDir $ \tmp => do
+        
+        let depDir = tmp /> "depends"
+
+        newDir depDir
+        copyDirRec files.dir tmp
+
+        traverse_ (linkDep depDir) (allToList depOutputs)
+
+        let ipkg = recipeToIpkg recipe name
+        let ipkgPath = show $ tmp /> name <.> "ipkg"
+
+        writeIpkg ipkg ipkgPath
+        _ <- system "idris2 --build \{ipkgPath}"
+
+        let buildDir = tmp /> "build"
+        let outDir = sirdiOutputs /> dirName name loc
+
+        case recipe.kind of
+             Library => do
+                 copyDirRec (buildDir /> "ttc") outDir
+                 pure $ MkOutput outDir
+
+             Application => do
+                 newDir outDir
+                 copyFileInto ((buildDir /> "exec") /> "main") outDir
+                 pure $ MkOutput $ outDir /> "main"
