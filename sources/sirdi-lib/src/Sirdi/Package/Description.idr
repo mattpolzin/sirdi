@@ -1,6 +1,7 @@
 module Sirdi.Package.Description
 
 import Sirdi.Package.Identifier
+import Sirdi.Source.Loc
 import Util.The
 
 
@@ -17,9 +18,15 @@ record AppOpts where
 
 
 public export
-record Description {pk : _} (for : PkgID pk) where
+record Description where
     constructor MkDescription
-    kind     : The pk
-    deps     : List (PkgID Library)
-    extra    : case pk of { Library => LibOpts; Application => AppOpts }
+    kind     : PackageKind
+    deps     : List Package
+    extra    : case kind of { Library => LibOpts; Application => AppOpts }
     passthru : List (String, String)
+
+
+public export
+data Recipe : PackageKind -> Package -> Type where
+    NormalRecipe : (desc : Description) -> Recipe desc.kind (Normal name loc)
+    InstalledRecipe : Recipe Library (Installed name)

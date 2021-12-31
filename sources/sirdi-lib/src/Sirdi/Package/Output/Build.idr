@@ -16,72 +16,58 @@ import Data.Hashable
 import System
 
 
-doBuildPackage : {pk : _}
-            -> {name : _}
-            -> {loc : _}
-            -> Files loc
-            -> (desc : Description (Normal pk name loc))
-            -> All Output desc.deps
-            -> IOEither String (Output (Normal pk name loc))
-doBuildPackage {pk} {name} {loc} files desc depOutputs = do
-    -- Create build directories.
+linkDep : {dep : Package} -> {recipe : Recipe Library dep}
+       -> Output recipe -> Path -> IOEither String String
+linkDep {dep = (Normal name loc)} {recipe = NormalRecipe (MkDescription Library deps extra passthru)} ttcFiles dependsDir = do
+    let installedAs = "\{name}\{show $ hash loc}"
+    symLink ttcFiles.dir (dependsDir /> installedAs)
+    pure installedAs
+linkDep {dep = (Installed name)} {recipe = InstalledRecipe} () _ = pure name
+
+
+export
+runRecipe : {pkg : Package} -> (recipe : Recipe pk pkg) -> Input recipe
+         -> IOEither String (Output recipe)
+runRecipe {pkg = (Installed name)} InstalledRecipe () = pure ()
+runRecipe {pkg = (Normal name loc)} (NormalRecipe (MkDescription kind deps extra passthru)) input = do
+    let installDir = sirdiOutputs /> "\{name}\{show $ hash loc}"
+    alreadyBuilt <- exists $ show installDir
+    if alreadyBuilt
+        then case kind of
+                  Library => pure $ MkTTCFiles installDir
+                  Application => pure $ MkExecutable $ installDir /> "main"
+        else do
     tempDir <- newTempDir
     let dependsDir = tempDir /> "depends"
     mapErr show $ MkEitherT $ createDir $ show dependsDir
 
     -- Copy source files into the build dir.
-    copyDirRec files.dir tempDir
+    copyDirRec input.sourceFiles.dir tempDir
 
     -- Link built dependencies' TTC files to the build dir.
-    depNames <- traverse (\(pkg ** ttcFiles) => case pkg of
-                                          (Legacy name) => pure name
-                                          (Normal Library name loc) => do
-                                              let installedAs = "\{name}\{show $ hash loc}"
-                                              symLink ttcFiles.dir (dependsDir /> installedAs)
-                                              pure installedAs
-                                          ) $ allToList depOutputs
+    depNames <- traverse (\((_ ** _) ** depOutput) => linkDep depOutput dependsDir) $ allToList input.depOutputs
 
     -- Use the Ipkg system to build the package. TODO: Use the Idris API.
     let ipkg = MkIpkg {
-        name = name,
-        depends = depNames,
-        modules = case pk of { Library => desc.extra.modules; Application => [] },
-        main = case pk of { Library => Nothing; Application => Just desc.extra.main },
-        exec = case pk of { Library => Nothing; Application => Just "main" },
-        passthru = desc.passthru
-      }
+      name = name,
+      depends = depNames,
+      modules = case kind of { Library => extra.modules; Application => [] },
+      main = case kind of { Library => Nothing; Application => Just extra.main },
+      exec = case kind of { Library => Nothing; Application => Just "main" },
+      passthru = passthru }
 
     let ipkgPath = tempDir /> name <.> ".ipkg"
     writeIpkg ipkg (show ipkgPath)
     _ <- system "idris2 --build \{show ipkgPath}"
 
-    let installDir = directory name loc
+    let installDir = sirdiOutputs /> "\{name}\{show $ hash loc}"
 
-    -- TODO: Cleanup temp dir. It would be nice if we had a "withTempDir" function in Util.
-    case pk of
-         Library     => do
+    case kind of
+         Library => do
             let ttcDir = (installDir /> "build") /> "ttc"
             copyDirRec ttcDir installDir
-            pure $ MkTTCFiles name loc
-
+            pure $ MkTTCFiles ttcDir
          Application => do
             newDir installDir
             mapErr show $ MkEitherT $ copyFile "\{show tempDir}/build/exec/main" "\{show installDir}/main"
-            pure $ MkExecutable name loc
-
-
-export
-buildPackage : {pk : _}
-            -> {name : _}
-            -> {loc : _}
-            -> Files loc
-            -> (desc : Description (Normal pk name loc))
-            -> All Output desc.deps
-            -> IOEither String (Output (Normal pk name loc))
-buildPackage {pk} {name} {loc} files desc depOutputs = do
-    alreadyBuilt <- exists $ show $ directory name loc
-    if alreadyBuilt
-        then case pk of
-                  Library => pure $ MkTTCFiles name loc
-                  Application => pure $ MkExecutable name loc
-        else doBuildPackage files desc depOutputs
+            pure $ MkExecutable $ installDir /> "main"

@@ -20,12 +20,13 @@ data PackageKind : Type where
 ||| A unique package identifier describing where to find a package. This type
 ||| is primarily used in describing where to find a dependency.
 public export
-data PkgID : PackageKind -> Type where
-    Normal : (pk : _) -> (name : String) -> (loc : Loc IsPinned) -> PkgID pk
-    Legacy : (name : String) -> PkgID Library
+data Package : Type where
+    Normal : (name : String) -> (loc : Loc IsPinned) -> Package
+    Installed : (name : String) -> Package
 
 
+{-
 public export
-(.name) : PkgID pk -> String
-(.name) (Normal _ name _) = name
-(.name) (Legacy name)     = name
+(.name) : Package pkg -> String
+(.name) (Normal _ id) = id.name
+(.name) (Legacy name) = name

@@ -2,48 +2,67 @@
 module Sirdi.Package.Output
 
 import Sirdi.Package.Identifier
+import Sirdi.Package.Description
 import Sirdi.Directories
 import Sirdi.Source.Loc
+import Sirdi.Source.Files
 import Util.Files
 import Util.IOEither
 import Data.Hashable
 import System
+import Data.List.Quantifiers
+import Util.Quantifiers
 
 
 ||| The TTC files produced as a result of building the specified library.
 export
-data TTCFiles : PkgID Library -> Type where
-    MkTTCFiles : (name : _) -> (loc : _) -> TTCFiles (Normal Library name loc)
+data TTCFiles : (0 pkg : Package) -> Type where
+    MkTTCFiles : Path -> TTCFiles pkg
 
 
 ||| The result executable from building the specified application.
 export
-data Executable : PkgID Application -> Type where
-    MkExecutable : (name : _) -> (loc : _) -> Executable (Normal Application name loc)
+data Executable : (0 pkg : Package) -> Type where
+    MkExecutable : Path -> Executable pkg
 
 
-||| Computes a type to represent the output for a package.
 public export
-Output : {pk : PackageKind} -> PkgID pk -> Type
-Output {pk = Library} pkg@(Normal _ _ _) = TTCFiles pkg
-Output {pk = Library} pkg@(Legacy _)     = ()
-Output {pk = Application} pkg            = Executable pkg
+Output : Recipe kind pkg -> Type
+Output InstalledRecipe = ()
+Output (NormalRecipe desc) with (desc.kind)
+  _ | Library = TTCFiles pkg
+  _ | Application = Executable pkg
 
 
-directory : String -> Loc IsPinned -> Path
-directory name loc = sirdiOutputs /> "\{name}\{show $ hash loc}"
+public export
+record NormalInput (loc : Loc IsPinned) (desc : Description) where
+    constructor MkNormalInput
+    sourceFiles : Files loc
+    depRecipes : All (Recipe Library) desc.deps
+    depOutputs : All (\(dep ** recipe) => Output recipe) (allToList depRecipes)
+
+
+public export
+Input : {pkg : Package} -> Recipe pk pkg -> Type
+Input {pkg = Normal name loc} (NormalRecipe desc) = NormalInput loc desc
+Input InstalledRecipe = ()
+
+
+{-
+directory : Package -> Path
+directory pkg = sirdiOutputs /> "\{pkg.name}\{show $ hash pkg.loc}"-}
 
 
 ||| Get the directory where the TTC files are being stored.
 public export
 (.dir) : TTCFiles pkg -> Path
-(.dir) (MkTTCFiles name loc) = directory name loc
+(.dir) (MkTTCFiles path) = path
 
 
 ||| Get the filepath to the executable.
 public export
 (.file) : Executable pkg -> Path
-(.file) (MkExecutable name loc) = directory name loc /> "main"
+(.file) (MkExecutable path) = path
 
 
 ||| Given the executable for a package, run it.

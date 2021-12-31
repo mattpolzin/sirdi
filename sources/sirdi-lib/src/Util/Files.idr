@@ -3,16 +3,12 @@ module Util.Files
 import public System.Path
 import Util.IOEither
 import System
-
-
-{-public export
-record FilePath where
-    constructor MkFilePath
-    inner : String-}
+import System.Directory
 
 
 public export
 newDir : Path -> IOEither String ()
+newDir path = mapErr show $ MkEitherT $ createDir $ show path
 
 
 public export
@@ -26,9 +22,18 @@ newTempDir = do
 
 public export
 copyDirRec : Path -> Path -> IOEither String ()
-copyDirRec x y = ?copyDirRec_rhs
+copyDirRec from to = do
+    n <- system "cp -r \{show from} \{show to}"
+    case n of
+         0 => pure ()
+         _ => throw "Failed to recursively copy \{show from} to \{show to}"
 
 
 public export
 symLink : Path -> Path -> IOEither String ()
-symLink x y = ?symLink_rhs
+symLink from to = do
+    n <- system "ln -s \{show from} \{show to}"
+    case n of
+         0 => pure ()
+         _ => throw "Failed to symlink \{show from} to \{show to}"
+

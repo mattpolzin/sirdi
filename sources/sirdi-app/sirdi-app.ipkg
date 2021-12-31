@@ -1,0 +1,10 @@
+package sirdi-app
+
+depends = sirdi-lib, toml, contrib, hashable,
+          sap
+
+main = Main
+
+executable = "sirdi"
+
+sourcedir = "src"

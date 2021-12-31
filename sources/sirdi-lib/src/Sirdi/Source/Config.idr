@@ -9,24 +9,23 @@ import Util.IOEither
 import Util.Files
 import System.File.ReadWrite
 import Util.TOML
+import Decidable.Equality
+import Data.List
 
 
 public export
 record Config (loc : Loc IsPinned) where
     constructor MkConfig
-    pkgs : List (name ** pk ** Description $ Normal pk name loc)
+    pkgs : List (String, Description)
 
 
 readConfig : {loc : _} -> Files loc -> IOEither String String
-readConfig files = mapErr show $ MkEitherT $ readFile "\{files.dir.inner}/sirdi.toml"
+readConfig files = mapErr show $ MkEitherT $ readFile $ show $ files.dir /> "sirdi.toml"
 
 
 FromTOML (Config loc) where
     fromTOML {loc} (VTable x) = do
-        pkgs <- traverse (\(name, v) => do
-            (pk ** desc) <- descFromTOML {name = name} {loc = loc} v
-            pure $ the (name ** pk ** Description $ Normal pk name loc) $ MkDPair name $ MkDPair pk $ desc
-              ) (SortedMap.toList x)
+        pkgs <- traverse (\(name, v) => (name,) <$> descFromTOML v) (SortedMap.toList x)
         pure $ MkConfig pkgs
     fromTOML _ = Left "Expected config file to be a table"
 
@@ -37,3 +36,12 @@ getConfig files = do
     contents <- readConfig files
     toml <- mapErr show $ MkEitherT $ pure $ parseTOML contents
     MkEitherT $ pure $ fromTOML (VTable toml)
+
+
+export
+getPkgDesc : {loc : _} -> (name : String) -> Files loc -> IOEither String Description
+getPkgDesc name files = do
+    cfg <- getConfig files
+    case Data.List.lookup name cfg.pkgs of
+         Just x => pure x
+         Nothing => throw "Package \{name} is not defined."
