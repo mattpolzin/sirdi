@@ -79,5 +79,5 @@ buildNormal recipe files depOutputs =
 
              Application => do
                  newDir outDir
-                 copyFileInto ((buildDir /> "exec") /> "main") outDir
+                 copyFileInto (buildDir /> "exec" /> "main") outDir
                  pure $ MkOutput $ outDir /> "main"

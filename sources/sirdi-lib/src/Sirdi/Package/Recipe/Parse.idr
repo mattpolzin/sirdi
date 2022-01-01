@@ -1,6 +1,6 @@
-module Sirdi.Package.Description.Parse
+module Sirdi.Package.Recipe.Parse
 
-import Sirdi.Package.Description
+import Sirdi.Package.Recipe
 import Sirdi.Package.Identifier
 import Sirdi.Source.Loc
 import Util.TOML
@@ -59,7 +59,7 @@ modulesFromTOML (VArray xs) = traverse (fromTOML {a = String}) xs
 modulesFromTOML _ = Left "Expected modules to be array"
 
 
-FromTOML Description where
+FromTOML (Recipe (Normal name loc)) where
     fromTOML desc = do
         kind <- tryLookup "type" desc >>= fromTOML {a = PackageKind}
         deps <- tryLookup "dependencies" desc >>= fromTOML {a = List Package}
@@ -67,13 +67,13 @@ FromTOML Description where
         case kind of
              Library => do
                 modules <- tryLookup "modules" desc >>= modulesFromTOML
-                pure $ MkDescription Library deps (MkLibOpts modules) []
+                pure $ MkRecipe Library deps (MkLibOpts modules) []
              Application => do
                 main <- tryLookup "main" desc >>= fromTOML {a = String}
                 ?h2
-                pure $ MkDescription Application deps (MkAppOpts main) []
+                pure $ MkRecipe Application deps (MkAppOpts main) []
 
 
 export
-descFromTOML : Value -> Either String Description
+descFromTOML : Value -> Either String (Recipe (Normal name loc))
 descFromTOML = fromTOML

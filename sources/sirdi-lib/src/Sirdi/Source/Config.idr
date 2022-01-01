@@ -2,8 +2,8 @@ module Sirdi.Source.Config
 
 import Sirdi.Source.Loc
 import Sirdi.Source.Files
-import Sirdi.Package.Description
-import Sirdi.Package.Description.Parse
+import Sirdi.Package.Recipe
+import Sirdi.Package.Recipe.Parse
 import Sirdi.Package.Identifier
 import Util.IOEither
 import Util.Files
@@ -11,12 +11,13 @@ import System.File.ReadWrite
 import Util.TOML
 import Decidable.Equality
 import Data.List
+import Util.List
 
 
 public export
 record Config (0 loc : Loc IsPinned) where
     constructor MkConfig
-    pkgs : List (String, Description)
+    pkgs : List (name ** Recipe (Normal name loc))
 
 
 readConfig : Files loc -> IOEither String String
@@ -26,7 +27,7 @@ readConfig files =
 
 
 FromTOML (Config loc) where
-    fromTOML (VTable x) = MkConfig <$> traverse (\(name, v) => (name,) <$> descFromTOML v) (SortedMap.toList x)
+    fromTOML (VTable x) = MkConfig <$> traverse (\(name, v) => ?h1) (SortedMap.toList x)
     fromTOML _ = Left "Expected config file to be a table"
 
 
@@ -39,9 +40,9 @@ getConfig files = do
 
 
 export
-getPkgDesc : (name : String) -> Files loc -> IOEither String Description
+getPkgDesc : (name : String) -> Files loc -> IOEither String (Recipe (Normal name loc))
 getPkgDesc name files = do
     cfg <- getConfig files
-    case Data.List.lookup name cfg.pkgs of
+    case dLookup name cfg.pkgs of
          Just x => pure x
          Nothing => throw "Package \{name} is not defined."
